@@ -8,7 +8,7 @@ output: html_document
 Write commands that help you answer the following questions using the dataset `congress-terms.csv`. Please read the data into `R` and answer the questions below.
 
 ```{r}
-
+cong <- read.csv("congress-terms.csv", header=TRUE, stringsAsFactors=FALSE)
 ```
 
 
@@ -28,6 +28,16 @@ Write commands that help you answer the following questions using the dataset `c
 3. In how many congresses did the House of Representatives have a Democratic majority?
 
 ```{r}
+house <- congress[congress$chamber=="house",]
+
+dem_maj <- tapply(house$party, house$congress, function(xx) {
+  partytable <- table(xx)
+  ndems <- partytable["D"]
+  nreps <- partytable["R"]
+  moredems <- ndems > nreps
+  return(moredems)
+})
+sum(dem_maj)
 
 ```
 

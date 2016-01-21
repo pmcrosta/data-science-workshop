@@ -8,18 +8,76 @@ output: html_document
 Write commands that help you answer the following questions using the dataset `congress-terms.csv`. Try not to look at the previous code we used!
 
 ```{r}
-
+head(congress)
+weird <- c(which(congress$age %in% c("No","Yes")), 
+           grep("-", congress$age), 
+           which(!(congress$chamber %in% c("house", "senate"))))
+cong <- congress[-weird,]
 ```
 
 
 1. Make a time series plot showing Democratic/Republican control of congress over time. By varying color, line thickness, or other graphical properties, make this plot also convey the average age of the congressmen representing each part over time.
 
 ```{r}
+party <- with(cong, tapply(party, congress, function(xx) {
+  partytable <- table(xx)
+  ncong <- sum(partytable)
+  ndem <- as.numeric(partytable["D"])
+  nrep <- as.numeric(partytable["R"])
+  nother <- ncong-ndem-nrep
+  return(list(ncong=ncong, ndem=ndem, nrep=nrep, nother=nother))
+}))
+
+age <- with(cong, tapply(as.numeric(age), congress, mean, na.rm=T))
+age_party <- with(cong, tapply(as.numeric(age), list(congress, party), mean, na.rm=T))
+
+partydf <- do.call(rbind,lapply(party, data.frame))
+
+partydf$age <- age
+partydf$age_dem <- age_party[,"D"]
+partydf$age_rep <- age_party[,"R"]
+
+partydf <- partydf[order(as.numeric(rownames(partydf))),]
+
+partydf$congress <- as.numeric(rownames(partydf))
+
+library(ggplot2)
+
+partydf$demratio <- partydf$ndem/partydf$ncong
+partydf$ageratio <- partydf$age_dem/partydf$age_rep
+
+myplot <- ggplot(data=partydf, 
+                 mapping=aes(x=congress, y=demratio, color=age, size=age))
+myplot + geom_line()
 
 ```
 
 2. Write a function that, for a particular congress (e.g. congress 113), shows a map of the party breakdown by state.
 
 ```{r}
+party_state <- with(cong[cong$congress==113,], tapply(party, state, function(xx) {
+  partytable <- table(xx)
+  ncong <- sum(partytable)
+  ndem <- as.numeric(partytable["D"])
+  nrep <- as.numeric(partytable["R"])
+  nother <- ncong-ndem-nrep
+  return(list(ncong=ncong, ndem=ndem, nrep=nrep, nother=nother))
+}))
 
+party_statedf <- do.call(rbind, lapply(party_state, data.frame))
+party_statedf$state <- rownames(party_statedf)
+
+statedf <- data.frame(cbind(state.abb, tolower(state.name)))
+
+states <- map_data("state") # long/lat information for all states
+party_statedf$region <- statedf$V2[match(party_statedf$state, statedf$state.abb)]
+
+stateplot <- merge(states, party_statedf, by="region", all.x=TRUE)
+
+head(states)
+statemap <- ggplot(states, aes(x=long, y=lat, group=group)) + 
+  geom_polygon(fill="grey65", color="white", size = 0.2) + # state colors/borders
+  theme_bw() + # no background grid
+  coord_map("mercator") # flat projection from sphere of US area
+statemap
 ```

@@ -8,7 +8,7 @@ output: html_document
 Write commands that help you answer the following questions using the dataset `humansofnewyork.csv`. Read this data into `R` and answer the questions below, trying not to rely too much on the previous code we used!
 
 ```{r}
-
+humans <- read.csv("humansofnewyork.csv", header = TRUE)
 ```
 
 
